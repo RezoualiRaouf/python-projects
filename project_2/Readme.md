@@ -1,0 +1,1 @@
+"This project is for learning web scraping and in our case that web is book.toscrape also a recommand to not search books in that web cuz it contains some inappropriate content or pics , It's only for learning purposes" 
