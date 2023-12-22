@@ -75,8 +75,11 @@ class TextEditor:
         self.filepath = filedialog.askopenfilename(defaultextension=".txt",
                                                     filetypes=[("Text file", ".txt"),
                                                                ("html file", ".html"),
+                                                               ("Readme file", ".md"),
+                                                               ("Python file", ".py"),
+                                                               ("c file", ".c"),
                                                                ("All files", "*.*")
-                                                               ]
+                                                                ]
                                                     )
         if self.filepath:
             with open(self.filepath, "r") as file:
@@ -93,6 +96,9 @@ class TextEditor:
         self.filepath = filedialog.asksaveasfilename(defaultextension=".txt",
                                                       filetypes=[("Text file", ".txt"),
                                                                  ("html file", ".html"),
+                                                                 ("Readme file", ".md"),
+                                                                 ("Python file", ".py"),
+                                                                 ("c file", ".c"),
                                                                  ("All files", "*.*")
                                                                 ]
                                                     )
