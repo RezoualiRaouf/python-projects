@@ -20,7 +20,5 @@ This is a simple text editor built using Tkinter in Python. It provides basic fu
 
 Run the editor:
 
-bash
-Copy code
+```bash
 python editor.py
-
