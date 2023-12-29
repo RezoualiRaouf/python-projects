@@ -82,12 +82,3 @@ Additional Notes
     
     *   If you encounter any issues or have suggestions, feel free to open an issue on the GitHub repository.
 
-License
--------
-
-This Weather App is open-source and available under the MIT License.
-
-* * *
-
-Feel free to customize this README to better fit your project and its specific details.
-
