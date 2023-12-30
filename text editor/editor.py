@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog
 import os
+import git
 
 class TextEditor:
     def __init__(self, window):
@@ -15,6 +16,7 @@ class TextEditor:
         self.text_stack = []
         self.current_filename = "Main Text Area"
 
+        
         # Configure the window
         self.window.rowconfigure(0, minsize=600)
         self.window.columnconfigure(1, minsize=800)
@@ -25,7 +27,7 @@ class TextEditor:
 
         # Create the frame for buttons
         self.frame_btn = tk.Frame(self.window, bd=2, width=200, height=200)
-        self.frame_btn.grid(column=0, row=0, sticky="w")
+        self.frame_btn.grid(column=0, row=0, sticky="nw")
 
         # Define buttons
         self.btn_newfile = tk.Button(self.frame_btn, text="New file", fg="#FF8E00", background="white", width=10,
@@ -38,6 +40,8 @@ class TextEditor:
                                   command=self.save_file)
         self.btn_undo = tk.Button(self.frame_btn, text="Undo", fg="Black", background="cyan", width=10,
                                   command=self.undo)
+        self.btn_add_commit = tk.Button(self.frame_btn, text="Add&commit", fg="Black", width=10,command=self.Add_commit)
+        self.btn_push = tk.Button(self.frame_btn, text="Push file(git)", fg="Black", width=10,command=self.push)
 
         # Grid layout for buttons
         self.btn_newfile.grid(column=0, row=0, sticky="n", pady=6)
@@ -45,6 +49,8 @@ class TextEditor:
         self.btn_reset.grid(column=0, row=2, sticky="n", pady=6)
         self.btn_save.grid(column=0, row=3, sticky="n", pady=6)
         self.btn_undo.grid(column=0, row=4, sticky="n", pady=6)
+        self.btn_add_commit.grid(column=0, row=5, sticky="n", pady=6)
+        self.btn_push.grid(column=0, row=8, sticky="n", pady=6)
 
         # Bind key release event to track_changes method
         self.window.bind("<KeyRelease>", self.track_changes)
@@ -53,6 +59,14 @@ class TextEditor:
         self.lbl_filename = tk.Label(self.window, text=f"Current File: {self.current_filename}", font=("Arial", 12),
                                      background="lightblue")
         self.lbl_filename.grid()
+
+        # Create entry to enter the commit message
+        self.entry_commit_msg = tk.Entry(self.frame_btn, width=24)
+        self.entry_commit_msg.grid(column=0, row=7, padx=10, pady=8)
+
+        # Create a lable to display that the entry text is only for commit msg
+        self.lbl_commit_msg = tk.Label(self.frame_btn,text= "enter your commit msg here:", font=("Arial", 12))
+        self.lbl_commit_msg.grid(column=0, row= 6, padx=10, pady=8)
 
     def update_filename(self):
         """
@@ -107,6 +121,7 @@ class TextEditor:
                 self.txt_edit.delete("1.0", tk.END)
                 self.text_stack.clear()
             self.current_filename = self.filepath
+            
             self.update_filename()
 
     def save_file(self):
@@ -118,6 +133,9 @@ class TextEditor:
             with open(self.filepath, "w") as file:
                 file.write(file_content)
             self.update_filename()
+        else:
+        # If the user cancels the file dialog, set self.filepath to an empty string
+            self.filepath = ""
 
     def reset_text(self):
         """
@@ -137,3 +155,30 @@ class TextEditor:
             self.txt_edit.delete("1.0", tk.END)
             self.txt_edit.insert(tk.END, undo_data)
         self.update_filename()
+
+    def Add_commit(self):
+        entered_text = self.entry_commit_msg.get()
+        
+        if entered_text:
+            if self.filepath:  # Ensure self.filepath is not None or an empty string
+                repo_path = git.Repo(search_parent_directories=True).working_tree_dir
+                repo = git.Repo(repo_path)
+                repo.index.add([self.filepath])
+                repo.index.commit(entered_text)
+                tk.messagebox.showinfo("Commit Successful", "Commit operation completed successfully.")
+            else:
+                tk.messagebox.showerror("Error", "File path not set. Save the file before committing.")
+
+    def push(self):
+        
+        if self.filepath:    
+            entered_text = self.entry_commit_msg.get()
+            if entered_text:
+
+                origin = self.repo.remotes["origin"]
+                try:
+                    origin.push("main")                
+                    tk.messagebox.showinfo("Push Successful", "Push operation completed successfully.")
+                except git.GitCommandError as e:                
+                    tk.messagebox.showerror("Push Failed", f"Push operation failed: {e}")
+
