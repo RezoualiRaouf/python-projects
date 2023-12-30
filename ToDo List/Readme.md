@@ -1,7 +1,3 @@
-this is a test for the text editor if he's can add and commit and also push files to github.
+this project is about a simpel to do list that can help you navigate in the tasks that you noted befor and check them and other things .......
 
-
-
-
-
-
+edited by my text editor.
