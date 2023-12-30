@@ -15,7 +15,7 @@ class TextEditor:
         self.filepath = None
         self.text_stack = []
         self.current_filename = "Main Text Area"
-
+        self.repo_path = git.Repo(search_parent_directories=True).working_tree_dir
         
         # Configure the window
         self.window.rowconfigure(0, minsize=600)
@@ -31,17 +31,19 @@ class TextEditor:
 
         # Define buttons
         self.btn_newfile = tk.Button(self.frame_btn, text="New file", fg="#FF8E00", background="white", width=10,
-                                     command=self.new_file)
+                                command=self.new_file)
         self.btn_open = tk.Button(self.frame_btn, text="Open file", fg="blue", background="Lightblue", width=10,
-                                  command=self.open_file)
+                                command=self.open_file)
         self.btn_reset = tk.Button(self.frame_btn, text="Reset text", fg="Black", background="tomato", width=10,
-                                   command=self.reset_text)
+                                command=self.reset_text)
         self.btn_save = tk.Button(self.frame_btn, text="Save file", fg="Black", background="lemon chiffon", width=10,
-                                  command=self.save_file)
+                                command=self.save_file)
         self.btn_undo = tk.Button(self.frame_btn, text="Undo", fg="Black", background="cyan", width=10,
-                                  command=self.undo)
-        self.btn_add_commit = tk.Button(self.frame_btn, text="Add&commit", fg="Black", width=10,command=self.Add_commit)
-        self.btn_push = tk.Button(self.frame_btn, text="Push file(git)", fg="Black", width=10,command=self.push)
+                                command=self.undo)
+        self.btn_add_commit = tk.Button(self.frame_btn, text="Add&Commit", fg="Black", width=10, 
+                                command=self.Add_commit)
+        self.btn_push = tk.Button(self.frame_btn, text="Push file", fg="Black", width=10, 
+                                command= self.push_to_remote)
 
         # Grid layout for buttons
         self.btn_newfile.grid(column=0, row=0, sticky="n", pady=6)
@@ -158,27 +160,35 @@ class TextEditor:
 
     def Add_commit(self):
         entered_text = self.entry_commit_msg.get()
-        
+
         if entered_text:
             if self.filepath:  # Ensure self.filepath is not None or an empty string
                 repo_path = git.Repo(search_parent_directories=True).working_tree_dir
                 repo = git.Repo(repo_path)
-                repo.index.add([self.filepath])
-                repo.index.commit(entered_text)
-                tk.messagebox.showinfo("Commit Successful", "Commit operation completed successfully.")
+
+                file_path_to_add = os.path.relpath(self.filepath, repo_path)
+                
+                try:
+                    # Commit changes
+                    repo.index.add(file_path_to_add)
+                    repo.index.commit(entered_text)
+                    tk.messagebox.showinfo("Commit Successful", "Commit operation completed successfully.")
+
+                    # Push to remote
+                    self.push_to_remote(repo)
+                except git.exc.GitCommandError as commit_error:
+                    tk.messagebox.showerror("Commit Failed", f"Commit operation failed: {commit_error}")
             else:
                 tk.messagebox.showerror("Error", "File path not set. Save the file before committing.")
 
-    def push(self):
-        
-        if self.filepath:    
-            entered_text = self.entry_commit_msg.get()
-            if entered_text:
+    def push_to_remote(self, repo):
+        branch_name = 'main'
+        remote_name = 'origin'
+        origin = repo.remotes[remote_name]
 
-                origin = self.repo.remotes["origin"]
-                try:
-                    origin.push("main")                
-                    tk.messagebox.showinfo("Push Successful", "Push operation completed successfully.")
-                except git.GitCommandError as e:                
-                    tk.messagebox.showerror("Push Failed", f"Push operation failed: {e}")
+        try:
+            origin.push(branch_name)
+            tk.messagebox.showinfo("Push Successful", "Push operation completed successfully.")
+        except git.exc.GitCommandError as push_error:
+            tk.messagebox.showerror("Push Failed", f"Push operation failed: {push_error}")
 
