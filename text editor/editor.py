@@ -1,5 +1,6 @@
+from tkinter import filedialog, messagebox, simpledialog
+from git import Repo, GitCommandError, InvalidGitRepositoryError
 import tkinter as tk
-from tkinter import filedialog
 import os
 import git
 
@@ -70,32 +71,38 @@ class TextEditor:
         self.lbl_commit_msg = tk.Label(self.frame_btn,text= "enter your commit msg here:", font=("Arial", 12))
         self.lbl_commit_msg.grid(column=0, row= 6, padx=10, pady=8)
 
+    def initialize_git_repo_path(self):
+        try:
+            return git.Repo(search_parent_directories=True).working_tree_dir
+        except InvalidGitRepositoryError:
+            messagebox.showwarning("Invalid Git Repository", "The specified path is not a valid Git repository.")
+            return ""  # Set a default value or handle as needed
+
     def update_filename(self):
         """
         Update the label displaying the current file name.
         """
         self.lbl_filename.config(text=f"Current File: {os.path.basename(self.current_filename)}")
 
+    def update_filename(self):
+        self.lbl_filename.config(text=f"Current File: {os.path.basename(self.current_filename)}")
+
     def track_changes(self, event):
-        """
-        Track changes in the text content and update the filename label.
-        """
         current_content = str(self.txt_edit.get("1.0", tk.END))
         self.text_stack.append(current_content)
         self.update_filename()
 
     def open_file(self):
-        """
-        Open a file and update the text area.
-        """
+        initial_dir = os.path.dirname(self.filepath) if self.filepath else os.getcwd()
+
         self.filepath = filedialog.askopenfilename(defaultextension=".txt",
+                                                   initialdir=initial_dir,
                                                     filetypes=[("Text file", ".txt"),
                                                                ("html file", ".html"),
                                                                ("Readme file", ".md"),
                                                                ("Python file", ".py"),
                                                                ("c file", ".c"),
-                                                               ("All files", "*.*")
-                                                                ]
+                                                               ("All files", "*.*")]
                                                     )
         if self.filepath:
             with open(self.filepath, "r") as file:
@@ -106,52 +113,41 @@ class TextEditor:
             self.update_filename()
 
     def new_file(self):
-        """
-        Create a new file and update the text area.
-        """
-        self.filepath = filedialog.asksaveasfilename(defaultextension=".txt",
+        initial_dir = os.path.dirname(self.filepath) if self.filepath else os.getcwd()
+
+        self.filepath = filedialog.asksaveasfilename(defaultextension="*.*",
+                                                     initialdir=initial_dir,
                                                       filetypes=[("Text file", ".txt"),
                                                                  ("html file", ".html"),
                                                                  ("Readme file", ".md"),
                                                                  ("Python file", ".py"),
                                                                  ("c file", ".c"),
-                                                                 ("All files", "*.*")
-                                                                ]
+                                                                 ("All files", "*.*")]
                                                     )
         if self.filepath:
             with open(self.filepath, "w") as file:
                 self.txt_edit.delete("1.0", tk.END)
                 self.text_stack.clear()
             self.current_filename = self.filepath
-            
             self.update_filename()
 
     def save_file(self):
-        """
-        Save the content to the current file.
-        """
         if self.filepath:
             file_content = str(self.txt_edit.get("1.0", tk.END))
             with open(self.filepath, "w") as file:
                 file.write(file_content)
             self.update_filename()
+            messagebox.showinfo("File Saved", "File saved successfully.")
         else:
-        # If the user cancels the file dialog, set self.filepath to an empty string
-            self.filepath = ""
+            messagebox.showerror("Error", "File path not set. Save the file before committing.")
 
     def reset_text(self):
-        """
-        Reset the text area.
-        """
         self.txt_edit.delete("1.0", tk.END)
         self.text_stack.clear()
         self.current_filename = "Main Text Area"
         self.update_filename()
 
     def undo(self):
-        """
-        Undo the last change in the text area.
-        """
         if self.text_stack:
             undo_data = self.text_stack.pop()
             self.txt_edit.delete("1.0", tk.END)
@@ -161,34 +157,48 @@ class TextEditor:
     def Add_commit(self):
         entered_text = self.entry_commit_msg.get()
 
-        if entered_text:
-            if self.filepath:  # Ensure self.filepath is not None or an empty string
-                repo_path = git.Repo(search_parent_directories=True).working_tree_dir
-                repo = git.Repo(repo_path)
+        if not entered_text:
+            messagebox.showwarning("Empty Commit Message", "Please enter a commit message.")
+            return
 
-                file_path_to_add = os.path.relpath(self.filepath, repo_path)
-                
-                try:
-                    # Commit changes
-                    repo.index.add(file_path_to_add)
-                    repo.index.commit(entered_text)
-                    tk.messagebox.showinfo("Commit Successful", "Commit operation completed successfully.")
+        if not self.filepath:
+            messagebox.showerror("Error", "File path not set. Save the file before committing.")
+            return
 
-                    # Push to remote
-                    self.push_to_remote(repo)
-                except git.exc.GitCommandError as commit_error:
-                    tk.messagebox.showerror("Commit Failed", f"Commit operation failed: {commit_error}")
-            else:
-                tk.messagebox.showerror("Error", "File path not set. Save the file before committing.")
+        repo_path = git.Repo(search_parent_directories=True).working_tree_dir
+        repo = git.Repo(repo_path)
 
-    def push_to_remote(self, repo):
-        branch_name = 'main'
-        remote_name = 'origin'
-        origin = repo.remotes[remote_name]
+        file_path_to_add = os.path.relpath(self.filepath, repo_path)
 
         try:
-            origin.push(branch_name)
-            tk.messagebox.showinfo("Push Successful", "Push operation completed successfully.")
-        except git.exc.GitCommandError as push_error:
-            tk.messagebox.showerror("Push Failed", f"Push operation failed: {push_error}")
+            repo.index.add(file_path_to_add)
+            repo.index.commit(entered_text)
+            messagebox.showinfo("Commit Successful", "Commit operation completed successfully.")
 
+            # Push to remote
+            self.push_to_remote(repo)
+        except GitCommandError as commit_error:
+            messagebox.showerror("Commit Failed", f"Commit operation failed: {commit_error}")
+
+    def push_to_remote(self, repo):
+        branch_name = simpledialog.askstring("Branch Name", "Enter the name of your branch:")
+
+        if branch_name is None:
+            # User canceled branch creation
+            return
+
+        try:
+            # Create and switch to the new branch
+            new_branch = repo.create_head(branch_name)
+            repo.head.reference = new_branch
+            repo.head.reset(index=True, working_tree=True)
+
+            # Push to the remote
+            origin = repo.remotes['origin']
+            origin.push(new_branch)
+
+            messagebox.showinfo("Push Successful", f"Push operation to {branch_name} completed successfully.")
+        except GitCommandError as push_error:
+            messagebox.showerror("Push Failed", f"Push operation failed: {push_error}")
+        except Exception as e:
+            messagebox.showerror("Error", f"An unexpected error occurred: {e}")
